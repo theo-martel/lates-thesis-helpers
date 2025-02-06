@@ -1,0 +1,1 @@
+To compile the examples, put here `picture-with-scalebar.sty` and the chosen version of pythonfigure as `pythonfigure.sty`, and put in the python-figures folder `do_python_figure.py`

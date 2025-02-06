@@ -1,0 +1,37 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{pythonfigure-lualatex}[2023/09/01 Package for matplotlib integration]
+\RequirePackage{pgfkeys}
+\RequirePackage{graphicx}
+\RequirePackage{shellesc}
+
+\pgfkeys{
+    /pythfig/.is family, /pythfig,
+    width/.estore in = \pythfigWidth,
+    height/.estore in = \pythfigHeight,
+    default/.style = {width = 0.5\textwidth, height = 0.2\textheight},
+    .unknown/.code = {}
+}
+\newlength{\pythfigw}
+\newlength{\pythfigh}
+
+\newcommand*{\pythonfigure}[2][]{%
+    %Extract the width and height values from the parameters
+    \pgfkeys{/pythfig,default,#1}%
+    %Parse the width and height as lengths
+    \setlength{\pythfigw}{\pythfigWidth}%
+    \setlength{\pythfigh}{\pythfigHeight}%
+    %Run the python script with the wanted width and height, and handle the possible python error
+    \directlua{%
+    local n = os.tmpname() %
+    local status = os.execute("cd python-figures && python do_python_figure.py\space#2\space\the\pythfigw\space\the\pythfigh > " .. n .. " 2>&1") %
+    texio.write_nl("log", "runsystem(cd python-figures && python do_python_figure.py\space#2\space\the\pythfigw\space\the\pythfigh)\string\n") %
+    if status ~= 0  then %
+        local handle = io.open(n) %
+        tex.error("Pythonfigure : Python error while executing #2 :\string\n" .. handle:read("*a") .. "\string\n") %
+        handle:close() %
+    end %
+    os.remove(n) %
+    }%
+    %Include the resulting pdf figure
+    \expandafter\includegraphics\expandafter[#1]{python-figures/pdf/#2.pdf}%
+}

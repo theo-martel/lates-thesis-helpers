@@ -1,0 +1,27 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{pythonfigure}[2023/09/01 Package for matplotlib integration]
+\RequirePackage{pgfkeys}
+\RequirePackage{graphicx}
+\RequirePackage{shellesc}
+
+\pgfkeys{
+    /pythfig/.is family, /pythfig,
+    width/.estore in = \pythfigWidth,
+    height/.estore in = \pythfigHeight,
+    default/.style = {width = 0.5\textwidth, height = 0.2\textheight},
+    .unknown/.code = {}
+}
+\newlength{\pythfigw}
+\newlength{\pythfigh}
+
+\newcommand*{\pythonfigure}[2][]{%
+    %Extract the width and height values from the parameters
+    \pgfkeys{/pythfig,default,#1}%
+    %Parse the width and height as lengths
+    \setlength{\pythfigw}{\pythfigWidth}%
+    \setlength{\pythfigh}{\pythfigHeight}%
+    %Run the python script with the wanted width and height
+    \iexec[quiet]{cd python-figures && python do_python_figure.py\space#2\space\the\pythfigw\space\the\pythfigh}%
+    %Include the resulting pdf figure
+    \expandafter\includegraphics\expandafter[#1]{python-figures/pdf/#2.pdf}%
+}

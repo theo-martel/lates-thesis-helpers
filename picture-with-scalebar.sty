@@ -1,0 +1,79 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{picture-with-scalebar}[2023/11/01 Package for automatic scalebar on pictures]
+\RequirePackage{pgfkeys}
+\RequirePackage{graphicx}
+\RequirePackage{tikz}
+\RequirePackage{ifthen}
+
+\makeatletter
+% Taken from https://tex.stackexchange.com/a/120055
+\def\pgfutil@gobble#1{}
+\pgfkeys{
+    /handlers/.unknown to list/.code=%
+        \let#1\pgfutil@gobble
+        \pgfkeysalso{
+            .unknown/.code=
+                \ifx\pgfkeyscurrentvalue\pgfkeysnovalue
+                    \let\pgfkeys@temp\pgfkeyscurrentname
+                \else
+                    \expandafter\expandafter\expandafter\def\expandafter\expandafter\expandafter\pgfkeys@temp\expandafter\expandafter\expandafter{\expandafter\pgfkeyscurrentname\expandafter=\expandafter{\pgfkeyscurrentvalue}}%
+                \fi
+                \expandafter\expandafter\expandafter\def\expandafter\expandafter\expandafter#1\expandafter\expandafter\expandafter{\expandafter#1\expandafter,\pgfkeys@temp},%
+            .@clear list/.code=\let#1\pgfutil@gobble
+        },
+    /scalepic/.is family, /scalepic,
+    width/.code = {},
+    height/.code = {},
+    scale/.code = {},
+    .unknown to list=\myList
+}
+\newlength{\ScalePicWidth}
+\newlength{\ScalePicOrgWidth}
+\makeatother
+
+\newcommand*{\includegraphicsscale}[5][south east]{%
+    % Removal of the width, height and scale keys from the parameters passed
+    \def\myList{}%
+    \pgfkeys{/scalepic,#2}%
+    \edef\GraphScaleExpandedmyList{\myList}%
+    % Computation of the picture width with and without scaling
+    \settowidth{\ScalePicOrgWidth}{\expandafter\includegraphics\expandafter[\GraphScaleExpandedmyList]{#5}}%
+    \settowidth{\ScalePicWidth}{\includegraphics[#2]{#5}}%
+    \pgfkeys{/scalepic/.@clear list}%
+    % Setup of some parameters depending on the chosen anchor corner
+    \ifthenelse{\equal{\detokenize{#1}}{\detokenize{south east}}}{%
+        \def\GraphScaleXScale{-1}%
+        \def\GraphScaleYScale{1}%
+        \def\GraphScaleAnchorLeg{above}%
+    }{%
+        \ifthenelse{\equal{\detokenize{#1}}{\detokenize{south west}}}{%
+            \def\GraphScaleXScale{1}%
+            \def\GraphScaleYScale{1}%
+            \def\GraphScaleAnchorLeg{above}%
+        }{%
+            \ifthenelse{\equal{\detokenize{#1}}{\detokenize{north west}}}{%
+                \def\GraphScaleXScale{1}%
+                \def\GraphScaleYScale{-1}%
+                \def\GraphScaleAnchorLeg{below}%
+            }{%
+                \ifthenelse{\equal{\detokenize{#1}}{\detokenize{north east}}}{%
+                    \def\GraphScaleXScale{-1}%
+                    \def\GraphScaleYScale{-1}%
+                    \def\GraphScaleAnchorLeg{below}%
+                }{%
+                \PackageError{picture-with-scalebar}{Unsupported anchor #1}{The anchor should be one of : south east, south west, north east, north west}%
+                }%
+            }%
+        }%
+    }%
+    % Annotation of the picture with a tikzpicture : scaled rectangle starting at (0.2cm,0.2cm) from the anchor corner, of height 0.1cm and width [parameter n°3]*[scaling=new width/original width]
+    % The text passed in [parameter n°4] is then put above or below the rectangle depending of the anchor corner
+    \begin{tikzpicture}%
+        \node[anchor=#1, inner sep=0,use as bounding box] at (0,0) {\includegraphics[#2]{#5}};%
+        \begin{scope}[xscale=\GraphScaleXScale,yscale=\GraphScaleYScale]%
+            \fill[red] (0.2cm,0.2cm) rectangle (0.2cm+#3/\ScalePicOrgWidth*\ScalePicWidth,0.3cm);%
+            \draw[red] (0.2cm+#3/\ScalePicOrgWidth/2*\ScalePicWidth,0.3cm) node[\GraphScaleAnchorLeg=-1pt,text depth=0pt]{\sffamily \footnotesize \textbf{#4}};%
+        \end{scope}%
+    \end{tikzpicture}%
+}
+
